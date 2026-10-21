@@ -2,7 +2,7 @@ import { z } from "zod";
 import type { CanvasElement } from "@/lib/canvas/types";
 import type { Dependency, Read } from "@/lib/generation/declare";
 import type { WithMetadata } from "@/lib/providers/base";
-import type { VideoResolution } from "@/lib/project/aspect-ratio";
+import type { Dimensions, VideoResolution } from "@/lib/project/aspect-ratio";
 import type { CharacterSchema } from "@/lib/api/request-schema-fields";
 import type { AttributeSchema } from "./attributes/schema";
 import type { ImageFormat } from "./image/enums";
@@ -54,12 +54,17 @@ export type VideoModelEntry = ModelEntry & {
 	resolutions: readonly [VideoResolution, ...VideoResolution[]];
 };
 
+/** An image model the vendor renders only at fixed sizes lists them. */
+export type ImageModelEntry = ModelEntry & {
+	frames?: readonly Dimensions[];
+};
+
 /** What each connector type's catalog entries carry. */
 export type ModelEntries = {
 	llm: ModelEntry;
 	tts: ModelEntry;
 	voice: ModelEntry;
-	image: ModelEntry;
+	image: ImageModelEntry;
 	video: VideoModelEntry;
 	sfx: ModelEntry;
 	music: ModelEntry;

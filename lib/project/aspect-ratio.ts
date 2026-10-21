@@ -23,7 +23,7 @@ export const ASPECT_RATIO_DIMENSIONS: Record<
 	}
 > = {
 	"16:9": {
-		image: { width: 2560, height: 1440 },
+		image: { width: 2048, height: 1152 },
 		video: {
 			"720p": { width: 1280, height: 720 },
 			"1080p": { width: 1920, height: 1080 },
@@ -31,7 +31,7 @@ export const ASPECT_RATIO_DIMENSIONS: Record<
 		output: { width: 1920, height: 1080 },
 	},
 	"9:16": {
-		image: { width: 1440, height: 2560 },
+		image: { width: 1152, height: 2048 },
 		video: {
 			"720p": { width: 720, height: 1280 },
 			"1080p": { width: 1080, height: 1920 },
