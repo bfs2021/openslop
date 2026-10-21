@@ -58,7 +58,7 @@ describe("createDimensionsPlugin", () => {
 				{ ...SLOP_IMAGE, prompt: "a cat", resolution: "1440p" },
 				portrait,
 			),
-		).toThrow("Slop Image v2 cannot render 1440p");
+		).toThrow("meta:muse@image cannot render 1440p");
 	});
 
 	it("records the aspect ratio, so changing it stales the result", () => {

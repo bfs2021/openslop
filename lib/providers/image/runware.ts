@@ -9,19 +9,17 @@ import { BaseProvider, type RawResult } from "../base";
 import { renderCharacterRefs } from "@/lib/connectors/character-refs";
 import { characterAvatars } from "@/lib/connectors/characters";
 import { validateRunwareKey, withRunware } from "../runware";
-import type { VendorParams } from "@/lib/connectors/models";
-import {
-	ASPECT_RATIO_DIMENSIONS,
-	DEFAULT_ASPECT_RATIO,
-} from "@/lib/project/aspect-ratio";
+import { renderSize, type VendorParams } from "@/lib/connectors/models";
+import { RUNWARE_IMAGE_MODELS } from "@/lib/connectors/image/runware/models";
+import { DEFAULT_ASPECT_RATIO } from "@/lib/project/aspect-ratio";
 import type { ImageProvider } from "../types";
 
 type RawImageResult = { data: string; format: ImageFormat } & RawResult;
 
 const RUNWARE_FORMATS = { jpg: "JPG", png: "PNG", webp: "WEBP" } as const;
 
-const DEFAULT_SIZE =
-	ASPECT_RATIO_DIMENSIONS[DEFAULT_ASPECT_RATIO].sizes["1440p"];
+const runwareModel = (model: string) =>
+	Object.values(RUNWARE_IMAGE_MODELS).find(({ id }) => id === model);
 
 export class RunwareImage
 	extends BaseProvider<VendorParams<ImageGenerateParams>, RawImageResult>
@@ -52,6 +50,9 @@ export class RunwareImage
 
 	protected async _generate(params: VendorParams<ImageGenerateParams>) {
 		const format = params.format ?? DEFAULT_IMAGE_FORMAT;
+		const entry = runwareModel(params.model);
+		if (!entry) throw new Error(`Runware has no image model "${params.model}"`);
+		const size = renderSize(entry, DEFAULT_ASPECT_RATIO, params.resolution);
 		const referenceImages = [
 			...characterAvatars(params.characterAssets ?? []),
 			...(params.referenceImages ?? []),
@@ -60,8 +61,8 @@ export class RunwareImage
 			const results = await runware.imageInference({
 				positivePrompt: renderCharacterRefs(params.prompt),
 				model: params.model,
-				width: params.width ?? DEFAULT_SIZE.width,
-				height: params.height ?? DEFAULT_SIZE.height,
+				width: params.width ?? size.width,
+				height: params.height ?? size.height,
 				outputType: "base64Data",
 				outputFormat: RUNWARE_FORMATS[format],
 				numberResults: 1,

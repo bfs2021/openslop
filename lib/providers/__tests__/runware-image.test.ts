@@ -97,7 +97,7 @@ describe("RunwareImage", () => {
 		);
 	});
 
-	it("passes custom dimensions and model", async () => {
+	it("passes custom dimensions", async () => {
 		mockImageInference.mockResolvedValue([
 			{ imageBase64Data: "data", cost: 0.02 },
 		]);
@@ -105,18 +105,40 @@ describe("RunwareImage", () => {
 		const provider = new RunwareImage("test-key");
 		await provider.generate({
 			prompt: "sunset",
-			model: "custom-model",
+			model: MODEL,
 			width: 1024,
 			height: 768,
 		});
 
 		expect(mockImageInference).toHaveBeenCalledWith(
-			expect.objectContaining({
-				model: "custom-model",
-				width: 1024,
-				height: 768,
-			}),
+			expect.objectContaining({ model: MODEL, width: 1024, height: 768 }),
 		);
+	});
+
+	it("sizes a model at its own default resolution", async () => {
+		mockImageInference.mockResolvedValue([
+			{ imageBase64Data: "data", cost: 0.01 },
+		]);
+
+		await new RunwareImage("test-key").generate({
+			prompt: "sunset",
+			model: "meta:muse@image",
+		});
+
+		expect(mockImageInference).toHaveBeenCalledWith(
+			expect.objectContaining({ width: 2048, height: 1152 }),
+		);
+	});
+
+	it("fails on a resolution the model cannot render", async () => {
+		await expect(
+			new RunwareImage("test-key").generate({
+				prompt: "sunset",
+				model: "meta:muse@image",
+				resolution: "1440p",
+			}),
+		).rejects.toThrow("meta:muse@image cannot render 1440p");
+		expect(mockImageInference).not.toHaveBeenCalled();
 	});
 
 	it("throws when no image data returned", async () => {
