@@ -38,8 +38,8 @@ describe("RunwareImage", () => {
 		expect(mockImageInference).toHaveBeenCalledWith({
 			positivePrompt: "a cat",
 			model: MODEL,
-			width: 2048,
-			height: 1152,
+			width: 2560,
+			height: 1440,
 			outputType: "base64Data",
 			outputFormat: "JPG",
 			numberResults: 1,

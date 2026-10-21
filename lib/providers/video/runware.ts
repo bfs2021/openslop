@@ -87,7 +87,7 @@ export class RunwareVideo extends BaseVideoProvider {
 		if (!entry) throw new Error(`Runware has no video model "${params.model}"`);
 		const resolution = params.resolution ?? entry.resolutions[0];
 		const size =
-			ASPECT_RATIO_DIMENSIONS[DEFAULT_ASPECT_RATIO].video[resolution];
+			ASPECT_RATIO_DIMENSIONS[DEFAULT_ASPECT_RATIO].sizes[resolution];
 		const conditioning = await CONDITIONERS[entry.id]({
 			prompt: params.prompt,
 			startFrame: params.frameImage,

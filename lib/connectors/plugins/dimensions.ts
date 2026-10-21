@@ -1,30 +1,21 @@
-import isEqual from "lodash/isEqual";
 import type { ConnectorPlugin, ModelRef } from "@/lib/connectors/types";
 import { modelEntry } from "../models";
 import {
 	ASPECT_RATIO_DIMENSIONS,
 	AspectRatioSchema,
-	type Dimensions,
-	type VideoResolution,
+	type MediaResolution,
 } from "@/lib/project/aspect-ratio";
 
 type Dimensioned = ModelRef & {
 	prompt: string;
 	width?: number;
 	height?: number;
-	resolution?: VideoResolution;
+	resolution?: MediaResolution;
 };
 
 const ASPECT_RATIO = "the aspect ratio";
 
-function imageSize(ref: ModelRef, size: Dimensions): Dimensions {
-	const { frames } = modelEntry("image", ref);
-	if (frames && !frames.some((frame) => isEqual(frame, size)))
-		throw new Error(`${ref.model} cannot render ${size.width}x${size.height}`);
-	return size;
-}
-
-/** Sizes a generation from the project's aspect ratio, and a video from its resolution too. */
+/** Sizes a generation from the project's aspect ratio and the resolution its model renders at. */
 export function createDimensionsPlugin(
 	kind: "image" | "video",
 ): ConnectorPlugin<Dimensioned> {
@@ -34,15 +25,15 @@ export function createDimensionsPlugin(
 			(_, { state }) => ({ [ASPECT_RATIO]: state.videoSettings.aspectRatio }),
 		],
 		beforeGenerate(params, ctx) {
-			const dims =
+			const { sizes } =
 				ASPECT_RATIO_DIMENSIONS[
 					AspectRatioSchema.parse(ctx.reads?.[ASPECT_RATIO])
 				];
-			if (kind === "image")
-				return { ...params, ...imageSize(params, dims.image) };
-			const resolution =
-				params.resolution ?? modelEntry("video", params).resolutions[0];
-			return { ...params, resolution, ...dims.video[resolution] };
+			const { resolutions } = modelEntry(kind, params);
+			const resolution = params.resolution ?? resolutions[0];
+			if (!resolutions.includes(resolution))
+				throw new Error(`${params.model} cannot render ${resolution}`);
+			return { ...params, resolution, ...sizes[resolution] };
 		},
 	};
 }

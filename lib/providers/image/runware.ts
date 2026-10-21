@@ -20,7 +20,8 @@ type RawImageResult = { data: string; format: ImageFormat } & RawResult;
 
 const RUNWARE_FORMATS = { jpg: "JPG", png: "PNG", webp: "WEBP" } as const;
 
-const DEFAULT_SIZE = ASPECT_RATIO_DIMENSIONS[DEFAULT_ASPECT_RATIO].image;
+const DEFAULT_SIZE =
+	ASPECT_RATIO_DIMENSIONS[DEFAULT_ASPECT_RATIO].sizes["1440p"];
 
 export class RunwareImage
 	extends BaseProvider<VendorParams<ImageGenerateParams>, RawImageResult>
