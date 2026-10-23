@@ -53,7 +53,6 @@ describe("pickThumbnailUrl", () => {
 	});
 });
 
-
 describe("isVideoThumbnailUrl", () => {
 	it.each([
 		["https://cdn.example/v.mp4", true],
