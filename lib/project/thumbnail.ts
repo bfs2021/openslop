@@ -12,9 +12,11 @@ export function pickThumbnailUrl(
 		const result = queue.getElementSnapshot(id).result;
 		const image = getPrimaryUrl(result, "image");
 		if (image) return image;
-		video ??= getPrimaryUrl(result, "video") ?? null;
+		const candidate = getPrimaryUrl(result, "video");
+		if (candidate && isVideoThumbnailUrl(candidate)) {
+			video ??= candidate;
+		}
 	}
-	// A video with no still is still a picture of the project (#808).
 	return video;
 }
 

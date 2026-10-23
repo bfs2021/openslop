@@ -31,6 +31,18 @@ describe("pickThumbnailUrl", () => {
 			"v.mp4",
 		],
 		[
+			"only a video the card can render",
+			SCRIPT,
+			{ "2": { videoUrl: "v.mkv" }, "3": { videoUrl: "w.mp4" } },
+			"w.mp4",
+		],
+		[
+			"null when the only video cannot be rendered by the card",
+			SCRIPT,
+			{ "2": { videoUrl: "v.mkv" } },
+			null,
+		],
+		[
 			"the first picture in document order, whenever it was generated",
 			SCRIPT,
 			{
