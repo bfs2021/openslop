@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { CaptionOverlay } from "@/components/captions/caption-overlay";
-import { captionWordsAt } from "@/lib/captions/caption-layout";
+import { groupIntoLines, wordsAt } from "@/lib/captions/caption-layout";
+import type { Caption } from "@remotion/captions";
+import { SAMPLE_WORD_MS } from "@/lib/captions/caption-presets";
 import type { CaptionStyle } from "@/lib/captions/caption-style";
-
-const WORD_MS = 420;
 
 /** Advances through `wordCount` words on a loop while `playing`. */
 export function useCaptionCycle(wordCount: number, playing: boolean): number {
@@ -26,7 +26,7 @@ export function useCaptionCycle(wordCount: number, playing: boolean): number {
 
 		const id = setInterval(
 			() => setIndex((current) => (current + 1) % wordCount),
-			WORD_MS,
+			SAMPLE_WORD_MS,
 		);
 		return () => clearInterval(id);
 	}, [playing, wordCount]);
@@ -40,21 +40,30 @@ export function useCaptionCycle(wordCount: number, playing: boolean): number {
  */
 export function CaptionStage({
 	style,
-	words,
+	captions,
 	activeIndex,
 	width,
 	height,
 	fontSizePx,
-	maxWordsPerLine = style.maxWordsPerLine,
+	lineMs = style.lineMs,
 }: {
 	style: CaptionStyle;
-	words: readonly string[];
+	captions: Caption[];
 	activeIndex: number;
 	width: number;
 	height: number;
 	fontSizePx: number;
-	maxWordsPerLine?: number;
+	lineMs?: number;
 }) {
+	const lines = useMemo(
+		() => groupIntoLines(captions, lineMs),
+		[captions, lineMs],
+	);
+	const seconds = captions[activeIndex].startMs / 1000;
+	const line = lines.find(
+		({ firstWordIndex, tokens }) =>
+			activeIndex < firstWordIndex + tokens.length,
+	);
 	return (
 		<div
 			className="relative shrink-0 overflow-hidden rounded-lg bg-on-media"
@@ -62,10 +71,7 @@ export function CaptionStage({
 		>
 			<CaptionOverlay
 				style={style}
-				words={captionWordsAt(words, activeIndex, {
-					maxWordsPerLine,
-					reveal: style.reveal,
-				})}
+				words={line ? wordsAt(line.tokens, seconds) : []}
 				fontSizePx={fontSizePx}
 			/>
 		</div>

@@ -12,3 +12,15 @@ export function toFrames(sec: number, fps: number): number {
 export function toSeconds(frames: number, fps: number): number {
 	return frames / fps;
 }
+
+export function frameSpan(
+	startSec: number,
+	durationSec: number,
+	fps: number,
+): { from: number; durationInFrames: number } {
+	const from = toFrames(startSec, fps);
+	return {
+		from,
+		durationInFrames: toFrames(startSec + durationSec, fps) - from,
+	};
+}

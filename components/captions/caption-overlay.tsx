@@ -1,5 +1,6 @@
-import type { CSSProperties } from "react";
+import { Fragment, type CSSProperties, type ReactNode } from "react";
 import type { CaptionWord } from "@/lib/captions/caption-layout";
+import { spaceBetween } from "@/lib/captions/word-spacing";
 import { captionFontStack } from "@/lib/captions/caption-fonts";
 import {
 	type CaptionAlignX,
@@ -45,7 +46,7 @@ function outline(width: number, color: string): CSSProperties {
 	};
 }
 
-function wordStyle(style: CaptionTextStyle): CSSProperties {
+function captionWordStyle(style: CaptionTextStyle): CSSProperties {
 	return {
 		color: style.fill,
 		fontWeight: style.bold ? 700 : 400,
@@ -53,16 +54,25 @@ function wordStyle(style: CaptionTextStyle): CSSProperties {
 		textDecoration: style.underline ? "underline" : "none",
 		...(style.border && outline(style.border.width, style.border.color)),
 		backgroundColor: style.background ?? undefined,
-		// The padding is unconditional and carries the word spacing, so switching
-		// a background on changes only the paint and never the layout.
-		padding: "0.05em 0.11em",
+		// Shadows widen the background past the glyphs without taking up room,
+		// so switching one on changes only the paint and never the layout.
+		boxShadow: style.background
+			? `-0.06em 0 0 0.05em ${style.background}, 0.06em 0 0 0.05em ${style.background}`
+			: undefined,
+		padding: 0,
 		borderRadius: "0.12em",
-		// `anywhere`, not `break-word`: only the former shrinks the span's
-		// min-content size, so a word wider than the frame wraps instead of
-		// overflowing this flex item.
-		overflowWrap: "anywhere",
 	};
 }
+
+type RenderWord = (
+	word: CaptionWord,
+	style: CSSProperties,
+	index: number,
+) => ReactNode;
+
+const renderSpan: RenderWord = (word, style) => (
+	<span style={style}>{word.text}</span>
+);
 
 /**
  * Draws one caption line over its parent (which must be positioned). Shared by
@@ -73,10 +83,13 @@ export function CaptionOverlay({
 	style,
 	words,
 	fontSizePx,
+	renderWord = renderSpan,
 }: {
 	style: CaptionStyle;
 	words: readonly CaptionWord[];
 	fontSizePx: number;
+	/** Draws each word, such as a field that edits it, instead of a span. */
+	renderWord?: RenderWord;
 }) {
 	if (words.length === 0) return null;
 
@@ -95,11 +108,9 @@ export function CaptionOverlay({
 		>
 			<div
 				style={{
-					display: "flex",
-					flexWrap: "wrap",
-					justifyContent: ALIGN_X[style.alignX],
-					alignItems: "baseline",
-					gap: "0.1em 0.06em",
+					// `anywhere`, not `break-word`: only the former shrinks this flex
+					// item's min-content size, so a word wider than the frame wraps.
+					overflowWrap: "anywhere",
 					fontFamily: captionFontStack(style.font),
 					fontSize: fontSizePx,
 					letterSpacing: "-0.01em",
@@ -111,17 +122,16 @@ export function CaptionOverlay({
 					textTransform: TRANSFORM[style.casing],
 				}}
 			>
-				{words.map((word, i) => (
-					<span
-						// Words repeat within a line, so the position is the identity.
-						key={i}
-						style={{
-							...wordStyle(word.active ? style.activeWord : style.base),
-							visibility: word.hidden ? "hidden" : "visible",
-						}}
-					>
-						{word.text}
-					</span>
+				{words.map((word, index) => (
+					// Words repeat within a line, so the position is the identity.
+					<Fragment key={index}>
+						{spaceBetween(words[index - 1]?.text, word.text)}
+						{renderWord(
+							word,
+							captionWordStyle(word.active ? style.activeWord : style.base),
+							index,
+						)}
+					</Fragment>
 				))}
 			</div>
 		</div>

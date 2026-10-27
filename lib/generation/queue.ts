@@ -1,3 +1,4 @@
+import type { ElementRef } from "@/lib/canvas/types";
 import type { AssetConnectorType, AssetResult } from "../connectors/types";
 import { errorMessage } from "../errors";
 import { createEmitter } from "../store/emitter";
@@ -6,10 +7,19 @@ import {
 	type ConcurrencyLimits,
 } from "./concurrency";
 import { generateForElement } from "./generate-for-element";
-import { SnapshotStore, type ElementSnapshot } from "./snapshots";
+import {
+	isGenerationActive,
+	SnapshotStore,
+	type ElementSnapshot,
+} from "./snapshots";
 import { generationInputs, needsGeneration } from "./staleness";
 import type { CommittedVersion } from "./versions";
-import { flattenGraph, type GenerationNode } from "./graph";
+import {
+	flattenGraph,
+	type GenerationNode,
+	type Landing,
+	type NodeId,
+} from "./graph";
 
 type ActiveJob = {
 	controller: AbortController;
@@ -127,6 +137,26 @@ export class GenerationQueue {
 		});
 	}
 
+	/** An edit keeps the inputs of the result it edits, so it goes stale with it. */
+	reviseResult(
+		{ id: elementId, type: elementType }: ElementRef,
+		revise: (result: AssetResult) => AssetResult,
+	): void {
+		const { result, resultInputs, connectorType, pinned, status } =
+			this.snapshots.get(elementId);
+		if (!result || !resultInputs || !connectorType)
+			throw new Error("There is nothing here to edit yet");
+		if (isGenerationActive(status)) throw new Error("This is still generating");
+		this.commit({
+			elementId,
+			elementType,
+			connectorType,
+			inputs: resultInputs,
+			result: revise(result),
+			pinned,
+		});
+	}
+
 	restoreResult({
 		elementId,
 		inputs,
@@ -148,6 +178,11 @@ export class GenerationQueue {
 		this.snapshots.commit(version);
 		this.snapshots.notify();
 		this.committed.notify(version);
+	}
+
+	private land(id: NodeId, { on, revise }: Landing, result: AssetResult) {
+		this.snapshots.remove(id);
+		this.reviseResult(on, (current) => revise(current, result));
 	}
 
 	private abortJob(id: string) {
@@ -237,6 +272,7 @@ export class GenerationQueue {
 				signal,
 			);
 			if (signal.aborted) return;
+			if (node.lands) return this.land(elementId, node.lands, result);
 			this.commit({
 				elementId,
 				elementType,

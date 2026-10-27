@@ -3,7 +3,14 @@ import { CONTENT_TYPES, type ContentType } from "@/lib/canvas/types";
 import { isBlankScene } from "@/lib/render/blank-scene";
 import type { ResolvedElement } from "@/lib/render/types";
 import { layoutOf } from "@/lib/render/__tests__/_layout";
-import { buildTimelineRows, packLanes } from "../timeline-rows";
+import {
+	buildCaptionRows,
+	buildTimelineRows,
+	packLanes,
+} from "../timeline-rows";
+import { toCaption } from "@/lib/captions/word-captions";
+import { lineText } from "@/lib/captions/caption-layout";
+import { VideoSettingsSchema } from "@/lib/project/video-settings";
 
 function el(
 	id: string,
@@ -205,5 +212,34 @@ describe("buildTimelineRows", () => {
 		expect(isBlankScene(visual?.clips[0].element as ResolvedElement)).toBe(
 			true,
 		);
+	});
+});
+
+describe("buildCaptionRows", () => {
+	const words = ["one", "two", "three"].map((text, at) =>
+		toCaption(text, at, at + 1),
+	);
+	const narration = el("n", "narration", {
+		captions: { firstWordIndex: 0, words },
+	});
+	const twoPerLine = (...elements: ResolvedElement[]) => {
+		const { captionStyle } = VideoSettingsSchema.parse({});
+		return layoutOf(elements, {
+			captionStyle: { ...captionStyle, lineMs: 1500 },
+		});
+	};
+
+	it("lays one clip per line, the last ending with its last word", () => {
+		const [row] = buildCaptionRows(twoPerLine(el("a", "image"), narration));
+		expect(
+			row.clips.map(({ start, duration, line }) => ({
+				start,
+				duration,
+				text: lineText(line),
+			})),
+		).toEqual([
+			{ start: 0, duration: 2, text: "one two" },
+			{ start: 2, duration: 1, text: "three" },
+		]);
 	});
 });

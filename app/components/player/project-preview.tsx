@@ -3,15 +3,22 @@
 import type { CallbackListener, PlayerRef } from "@remotion/player";
 import dynamic from "next/dynamic";
 import { useEffect, useState, type MutableRefObject, type Ref } from "react";
+import { CaptionLineContext } from "@/components/captions/caption-line";
 import type { RenderLayout } from "@/lib/render/types";
 import { ToastErrorBoundary } from "../toast-error-boundary";
 import { ActiveSceneSync } from "./active-scene-sync";
+import { EditableCaptionLine } from "./editable-caption-line";
 import { usePlayerControl } from "./player-control-context";
 import { PlayPauseFlash } from "./play-pause-flash";
 import { usePreservedPlayhead } from "./use-preserved-playhead";
 import styles from "./project-preview.module.css";
 
 const fullSizeStyle = { width: "100%", height: "100%" };
+
+const passThroughStyle = {
+	...fullSizeStyle,
+	pointerEvents: "none",
+} as const;
 
 const RemotionPlayer = dynamic(
 	async () => {
@@ -38,7 +45,7 @@ const RemotionPlayer = dynamic(
 					fps={layout.fps}
 					compositionWidth={layout.width}
 					compositionHeight={layout.height}
-					style={fullSizeStyle}
+					style={controls ? fullSizeStyle : passThroughStyle}
 					clickToPlay={false}
 					controls={controls}
 					acknowledgeRemotionLicense
@@ -80,15 +87,9 @@ export function ProjectPreview({
 		player.toggle();
 		setFlash((prev) => ({ key: (prev?.key ?? 0) + 1, playing: willPlay }));
 	};
+	// Clicks pass through the video to the play button, except on a caption line.
 	return (
 		<div className={`relative h-full w-full ${styles.player}`}>
-			<ToastErrorBoundary label="Player">
-				<RemotionPlayer
-					layout={layout}
-					playerRef={registerPlayer}
-					controls={isFullscreen}
-				/>
-			</ToastErrorBoundary>
 			<button
 				type="button"
 				tabIndex={-1}
@@ -96,6 +97,15 @@ export function ProjectPreview({
 				className="absolute inset-0 cursor-pointer"
 				onClick={toggleAndFlash}
 			/>
+			<ToastErrorBoundary label="Player">
+				<CaptionLineContext value={EditableCaptionLine}>
+					<RemotionPlayer
+						layout={layout}
+						playerRef={registerPlayer}
+						controls={isFullscreen}
+					/>
+				</CaptionLineContext>
+			</ToastErrorBoundary>
 			<PlayPauseFlash flash={flash} />
 			<ActiveSceneSync />
 		</div>

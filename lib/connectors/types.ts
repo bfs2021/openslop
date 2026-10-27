@@ -1,3 +1,4 @@
+import type { Caption } from "@remotion/captions";
 import { z } from "zod";
 import type { CanvasElement } from "@/lib/canvas/types";
 import type { Dependency, Read } from "@/lib/generation/declare";
@@ -16,6 +17,7 @@ export const ASSET_CONNECTOR_TYPES = [
 	"tts",
 	"video",
 	"voice",
+	"stt",
 ] as const;
 
 export type AssetConnectorType = (typeof ASSET_CONNECTOR_TYPES)[number];
@@ -64,6 +66,7 @@ export type ModelEntries = {
 	video: VisualModelEntry;
 	sfx: ModelEntry;
 	music: ModelEntry;
+	stt: ModelEntry;
 };
 
 export type ModelTable = Record<string, ModelEntry>;
@@ -129,20 +132,29 @@ export type ResolvedConnectorConfig = ConnectorConfig & { model: ModelRef };
  */
 export type ConnectorGenerateParams = Partial<ModelRef> & { prompt: string };
 
-export const TextTimestampSchema = z.object({
-	text: z.string(),
-	start: z.number(),
-	end: z.number(),
-});
+/** Remotion's caption, holding one word as its provider spelled it, never padded with spaces. */
+export const CaptionSchema = z.object({
+	text: z
+		.string()
+		.min(1, "A caption holds no word")
+		.refine((text) => text === text.trim(), "A caption is never padded"),
+	startMs: z.number(),
+	endMs: z.number(),
+	timestampMs: z.number().nullable(),
+	confidence: z.number().nullable(),
+}) satisfies z.ZodType<Caption>;
 
-export type TextTimestamp = z.infer<typeof TextTimestampSchema>;
+/** Words saved in an older shape load as none, so the clip opens uncaptioned. */
+const WordsSchema = z.array(CaptionSchema).optional().catch(undefined);
 
 export const AssetResultSchema = z.object({
 	durationSec: z.number(),
 	imageUrl: z.string().optional(),
 	audioUrl: z.string().optional(),
 	videoUrl: z.string().optional(),
-	textTimestamps: z.array(TextTimestampSchema).optional(),
+	textTimestamps: WordsSchema,
+	/** The words as generated, which a reset brings back. */
+	originalTextTimestamps: WordsSchema,
 	voiceId: z.string().optional(),
 });
 
@@ -202,12 +214,6 @@ export type ImageGenerateParams = ConnectorGenerateParams & {
 	referenceImages?: string[];
 };
 
-export const TTSResultSchema = AssetResultSchema.extend({
-	textTimestamps: z.array(TextTimestampSchema),
-});
-
-export type TTSResult = z.infer<typeof TTSResultSchema>;
-
 export type TTSGenerateParams = ConnectorGenerateParams & {
 	voiceId?: string;
 	name?: string;
@@ -215,6 +221,22 @@ export type TTSGenerateParams = ConnectorGenerateParams & {
 	emotion?: TTSEmotion;
 	format?: string;
 };
+
+/** The sound to turn into text, which the server requires. */
+export type STTGenerateParams = ConnectorGenerateParams & {
+	mediaUrl?: string;
+};
+
+export type SourcedSTTParams = STTGenerateParams & {
+	mediaUrl: string;
+};
+
+export type STTResult = Pick<AssetResult, "durationSec"> & {
+	textTimestamps: Caption[];
+};
+
+export type TTSResult = AssetResult &
+	STTResult & { originalTextTimestamps: Caption[] };
 
 /** A TTS request after its speaker's voice is resolved. */
 export type VoicedTTSParams = TTSGenerateParams & { voiceId: string };

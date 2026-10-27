@@ -1,10 +1,10 @@
 import type { AssetBundle } from "@/lib/api/asset-bundle";
 import { HttpTTSGateway } from "@/lib/gateway/http";
+import { readTimestamps } from "@/lib/providers/timestamps-file";
 import { BaseAssetConnector } from "../asset-base";
 import type { AttributeSchema } from "../attributes/schema";
 import { TTS_ATTRIBUTES } from "./attributes";
 import {
-	TTSResultSchema,
 	type HostedVoicePreview,
 	type ResolvedConnectorConfig,
 	type TTSConnector,
@@ -40,12 +40,11 @@ export class HttpTTSConnector
 
 	/** Speech carries the word timings the karaoke captions are drawn from. */
 	async resolveBundle(bundle: AssetBundle): Promise<TTSResult> {
+		const words = await readTimestamps(bundle);
 		return {
 			...(await super.resolveBundle(bundle)),
-			textTimestamps: await bundle.fetchJson(
-				"timestamps",
-				TTSResultSchema.shape.textTimestamps,
-			),
+			textTimestamps: words,
+			originalTextTimestamps: words,
 		};
 	}
 }

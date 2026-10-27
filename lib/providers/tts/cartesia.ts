@@ -1,10 +1,7 @@
+import type { Caption } from "@remotion/captions";
 import { unstable_cache } from "next/cache";
 import Cartesia from "@cartesia/cartesia-js";
-import type {
-	TextTimestamp,
-	VoiceInfo,
-	VoiceSearchParams,
-} from "@/lib/connectors/types";
+import type { VoiceInfo, VoiceSearchParams } from "@/lib/connectors/types";
 import {
 	DEFAULT_TTS_EMOTION,
 	DEFAULT_TTS_SPEED,
@@ -14,7 +11,9 @@ import {
 import type { BundleFile } from "@/lib/api/asset-bundle";
 import { logger } from "@/lib/api/logger";
 import { BaseProvider, type RawResult } from "../base";
-import { validateByProbe } from "../validate";
+import { timestampsFile } from "../timestamps-file";
+import { trimmedWords, type TimedToken } from "@/lib/captions/word-captions";
+import { validateCartesiaKey } from "../cartesia";
 import { pcmDurationSec, pcmSilence, wavFromPcm, type PcmFormat } from "../wav";
 import type { TTSProvider, TTSRequest } from "./base";
 import { fetchAllowedVoicePreview } from "./voice-preview";
@@ -30,7 +29,7 @@ import type {
 
 type RawTTSResult = {
 	data: Buffer;
-	textTimestamps: TextTimestamp[];
+	textTimestamps: Caption[];
 } & RawResult;
 
 /** Cartesia reports no per-request cost; the Scale plan is $299 for 8M characters. */
@@ -130,14 +129,8 @@ export class CartesiaTTS
 		this.client = new Cartesia({ apiKey });
 	}
 
-	/** Listing one voice is the cheapest call the API authenticates. */
 	async validate() {
-		return validateByProbe("https://api.cartesia.ai/voices/?limit=1", {
-			headers: {
-				"X-API-Key": this.apiKey,
-				"Cartesia-Version": "2024-11-13",
-			},
-		});
+		return validateCartesiaKey(this.apiKey);
 	}
 
 	async fetchVoicePreview(url: string): Promise<Response> {
@@ -154,12 +147,7 @@ export class CartesiaTTS
 				data: result.data,
 				contentType: "audio/wav",
 			},
-			{
-				key: "timestamps",
-				filename: "timestamps.json",
-				data: JSON.stringify(result.textTimestamps),
-				contentType: "application/json",
-			},
+			timestampsFile(result.textTimestamps),
 		];
 	}
 
@@ -209,7 +197,7 @@ export class CartesiaTTS
 
 		try {
 			const audioChunks: Buffer[] = [];
-			const textTimestamps: TextTimestamp[] = [];
+			const tokens: TimedToken[] = [];
 			const request: GenerationRequest = {
 				model_id: params.model,
 				transcript: params.prompt,
@@ -232,7 +220,7 @@ export class CartesiaTTS
 				}
 				if (response.type === "timestamps" && response.word_timestamps) {
 					const { words, start, end } = response.word_timestamps;
-					textTimestamps.push(
+					tokens.push(
 						...words.map((text, i) => ({ text, start: start[i], end: end[i] })),
 					);
 				}
@@ -251,7 +239,7 @@ export class CartesiaTTS
 			]);
 			return {
 				data: wavFromPcm(padded, STREAMED_FORMAT),
-				textTimestamps,
+				textTimestamps: trimmedWords(tokens),
 				costUsd: params.prompt.length * USD_PER_CHARACTER,
 				// Word timestamps stop at the last word, and may be absent.
 				metadata: {

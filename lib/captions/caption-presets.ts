@@ -1,3 +1,4 @@
+import type { Caption } from "@remotion/captions";
 import {
 	DEFAULT_CAPTION_STYLE,
 	type CaptionStyle,
@@ -41,7 +42,6 @@ const PRESETS: Record<CaptionPresetKey, Omit<CaptionPreset, "key">> = {
 		font: "bangers",
 		fontSize: 62,
 		casing: "upper",
-		reveal: "line",
 		alignX: "center",
 		base: text({ bold: false }),
 		activeWord: text({ fill: "#6DC7C8", bold: false }),
@@ -50,22 +50,18 @@ const PRESETS: Record<CaptionPresetKey, Omit<CaptionPreset, "key">> = {
 		font: "montserrat",
 		fontSize: 40,
 		casing: "none",
-		reveal: "line",
 		activeWord: text({ fill: "#ffe14d", bold: true }),
 		alignX: "center",
 		alignY: "middle",
-		maxWordsPerLine: 4,
 		base: text({ bold: false }),
 	}),
 	boxed: preset("Boxed", {
 		font: "oswald",
 		casing: "upper",
-		reveal: "line",
 		alignX: "center",
 		activeWord: text({ background: "#FE2953" }),
 	}),
 	spotlight: preset("Spotlight", {
-		reveal: "line",
 		alignX: "center",
 		alignY: "bottom",
 	}),
@@ -73,7 +69,7 @@ const PRESETS: Record<CaptionPresetKey, Omit<CaptionPreset, "key">> = {
 		font: "bebasNeue",
 		fontSize: 80,
 		casing: "upper",
-		maxWordsPerLine: 1,
+		lineMs: 0,
 		alignX: "center",
 		alignY: "middle",
 		base: text({ border: null }),
@@ -95,14 +91,21 @@ export const captionPresetStyle = (key: CaptionPresetKey): CaptionStyle =>
 export const captionPresetLabel = (key: CaptionPresetKey): string =>
 	PRESETS[key].label;
 
-/** Stand-in narration for the panel previews. */
-export const CAPTION_SAMPLE_WORDS = [
-	"Style",
-	"your",
-	"captions",
-	"exactly",
-	"how",
-	"you",
-	"like",
-	"them",
-];
+export const SAMPLE_WORD_MS = 420;
+
+const sampleCaptions = (text: string): Caption[] =>
+	text.split(" ").map((word, index) => ({
+		text: word,
+		startMs: index * SAMPLE_WORD_MS,
+		endMs: (index + 1) * SAMPLE_WORD_MS,
+		timestampMs: null,
+		confidence: null,
+	}));
+
+/** Stand-in narration for the panel preview. */
+export const CAPTION_SAMPLE = sampleCaptions(
+	"Style your captions exactly how you like them",
+);
+
+/** Stand-in narration for the preset thumbnails. */
+export const CAPTION_THUMBNAIL_SAMPLE = sampleCaptions("Look at this");

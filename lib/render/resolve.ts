@@ -2,15 +2,25 @@ import { CONTENT_TYPES, type CanvasBlock } from "@/lib/canvas/types";
 import { isScene } from "@/lib/canvas/scenes";
 import { getPromptText } from "@/lib/generation/inputs";
 import { getPrimaryUrl } from "@/lib/connectors/asset-url";
+import type { AssetResult } from "@/lib/connectors/types";
 import type { ElementSnapshot } from "@/lib/generation/snapshots";
-import type { ResolvedElement } from "./types";
+import type { ResolvedCaptions, ResolvedElement } from "./types";
 import {
 	getLoop,
 	getLoops,
 	getMotion,
 	getVolume,
 } from "../canvas/element-attributes";
-import { elementTrim, trimTimestamps } from "./clip-trim";
+import { elementTrim, trimTimestamps, type Trim } from "./clip-trim";
+
+function resolveCaptions(
+	{ textTimestamps }: AssetResult,
+	trim: Trim,
+): ResolvedCaptions | undefined {
+	if (!textTimestamps?.length) return undefined;
+	const words = trimTimestamps(textTimestamps, trim);
+	return { firstWordIndex: textTimestamps.length - words.length, words };
+}
 
 export function resolveElements(
 	blocks: CanvasBlock[],
@@ -34,11 +44,6 @@ export function resolveElements(
 
 			const mediaDurationSec = snapshot.result.durationSec;
 			const trim = elementTrim(element, mediaDurationSec);
-			const timestamps = snapshot.result.textTimestamps;
-			const captionTimestamps =
-				captionsEnabled && timestamps?.length
-					? trimTimestamps(timestamps, trim.trimStartSec)
-					: undefined;
 
 			resolved.push({
 				id: element.id,
@@ -55,7 +60,9 @@ export function resolveElements(
 				loop: getLoop(element),
 				volume: getVolume(element),
 				motion: getMotion(element),
-				captionTimestamps,
+				captions: captionsEnabled
+					? resolveCaptions(snapshot.result, trim)
+					: undefined,
 			});
 		}
 	}

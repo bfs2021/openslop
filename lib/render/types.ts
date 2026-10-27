@@ -1,8 +1,15 @@
 import type { ContentType, ElementRole, LayerType } from "@/lib/canvas/types";
-import type { TextTimestamp } from "@/lib/connectors/types";
+import type { Caption } from "@remotion/captions";
 import type { CaptionStyle } from "../captions/caption-style";
 import type { MotionEffect } from "./motion-effect-names";
 import type { TransitionType } from "./transitions";
+
+/** The words an element shows, from its trim start. */
+export type ResolvedCaptions = {
+	/** Where `words` start in the element's own word list, past those the trim cut. */
+	firstWordIndex: number;
+	words: Caption[];
+};
 
 export type ResolvedElement = {
 	id: string;
@@ -23,7 +30,7 @@ export type ResolvedElement = {
 	loop: boolean;
 	volume: number;
 	motion: MotionEffect;
-	captionTimestamps?: TextTimestamp[];
+	captions?: ResolvedCaptions;
 };
 
 export type Sequence = {

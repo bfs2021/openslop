@@ -1,44 +1,40 @@
-import { useMemo } from "react";
-import { AbsoluteFill, useCurrentFrame, useVideoConfig } from "remotion";
-import { CaptionOverlay } from "@/components/captions/caption-overlay";
-import { createRequiredContext } from "@/lib/components/create-required-context";
-import type { TextTimestamp } from "@/lib/connectors/types";
-import { activeWordIndex, captionWordsAt } from "@/lib/captions/caption-layout";
+import { use } from "react";
+import { useCurrentFrame, useVideoConfig } from "remotion";
+import { CaptionLineContext } from "@/components/captions/caption-line";
+import { wordsAt } from "@/lib/captions/caption-layout";
 import {
 	captionFontSizePx,
 	type CaptionStyle,
 } from "@/lib/captions/caption-style";
-import { toSeconds } from "@/lib/render/frames";
+import { frameSpan, toSeconds } from "@/lib/render/frames";
+import type { CaptionSequence } from "@/lib/render/caption-rule";
 
-// Caption styling applies to every caption in the composition, so it rides a
-// provider rather than threading through the sequence layers that never read it.
-const [CaptionStyleContext, useCaptionStyle] =
-	createRequiredContext<CaptionStyle>("CaptionStyleContext");
-
-export const CaptionStyleProvider = CaptionStyleContext.Provider;
-
-export function Captions({ timestamps }: { timestamps: TextTimestamp[] }) {
-	const style = useCaptionStyle();
+export function Captions({
+	captions,
+	style,
+}: {
+	captions: CaptionSequence[];
+	style: CaptionStyle;
+}) {
+	const Line = use(CaptionLineContext);
 	const frame = useCurrentFrame();
 	const { fps, height } = useVideoConfig();
-
-	const { words, startTimes } = useMemo(
-		() => ({
-			words: timestamps.map(({ text }) => text),
-			startTimes: timestamps.map(({ start }) => start),
-		}),
-		[timestamps],
-	);
-
-	const index = activeWordIndex(startTimes, toSeconds(frame, fps));
-
-	return (
-		<AbsoluteFill>
-			<CaptionOverlay
+	const fontSizePx = captionFontSizePx(style.fontSize, height);
+	return captions.map(({ element, line, start, duration }) => {
+		const { from, durationInFrames } = frameSpan(start, duration, fps);
+		if (frame < from || frame >= from + durationInFrames) return null;
+		return (
+			<Line
+				key={`${element.id}-${start}`}
 				style={style}
-				words={captionWordsAt(words, index, style)}
-				fontSizePx={captionFontSizePx(style.fontSize, height)}
+				words={wordsAt(
+					line.tokens,
+					line.startMs / 1000 + toSeconds(frame - from, fps),
+				)}
+				fontSizePx={fontSizePx}
+				element={element}
+				firstWordIndex={line.firstWordIndex}
 			/>
-		</AbsoluteFill>
-	);
+		);
+	});
 }

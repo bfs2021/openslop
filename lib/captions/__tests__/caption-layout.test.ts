@@ -1,71 +1,96 @@
 import { describe, expect, it } from "vitest";
-import { activeWordIndex, captionWordsAt } from "../caption-layout";
+import { groupIntoLines, lineText, wordsAt } from "../caption-layout";
+import { toCaption } from "../word-captions";
 
 const WORDS = ["one", "two", "three", "four", "five"];
-const text = (words: { text: string }[]) => words.map((w) => w.text);
-const shown = (words: { text: string; hidden: boolean }[]) =>
-	words.filter((w) => !w.hidden).map((w) => w.text);
-const activeText = (words: { text: string; active: boolean }[]) =>
-	words.filter((w) => w.active).map((w) => w.text);
+/** A word a second, each spoken for most of it. */
+const timed = WORDS.map((text, at) => toCaption(text, at, at + 0.8));
+const spans = (lines: { firstWordIndex: number; tokens: unknown[] }[]) =>
+	lines.map(({ firstWordIndex, tokens }) =>
+		WORDS.slice(firstWordIndex, firstWordIndex + tokens.length),
+	);
 
-describe("activeWordIndex", () => {
-	const startTimes = [0, 1, 2];
+describe("wordsAt", () => {
+	const [line] = groupIntoLines(timed.slice(0, 3), 3000);
+	const active = (seconds: number) =>
+		wordsAt(line.tokens, seconds).find((word) => word.active)?.text;
 
-	it("is -1 before the first word", () => {
-		expect(activeWordIndex(startTimes, -0.5)).toBe(-1);
+	it("marks no word before the first one starts", () => {
+		expect(active(-0.5)).toBeUndefined();
 	});
 
 	it("holds a word until the next one starts", () => {
-		expect(activeWordIndex(startTimes, 0)).toBe(0);
-		expect(activeWordIndex(startTimes, 0.99)).toBe(0);
-		expect(activeWordIndex(startTimes, 1)).toBe(1);
-		expect(activeWordIndex(startTimes, 99)).toBe(2);
+		expect(active(0)).toBe("one");
+		expect(active(0.99)).toBe("one");
+		expect(active(1)).toBe("two");
+		expect(active(99)).toBe("three");
+	});
+
+	it("shows each word as stored, joined with spaces in the line's text", () => {
+		expect(wordsAt(line.tokens, 0).map(({ text }) => text)).toEqual([
+			"one",
+			"two",
+			"three",
+		]);
+		expect(lineText(line)).toBe("one two three");
 	});
 });
 
-describe("captionWordsAt", () => {
-	const line = { maxWordsPerLine: 2, reveal: "line" } as const;
-	const word = { maxWordsPerLine: 2, reveal: "word" } as const;
-
-	it("is empty outside the word range", () => {
-		expect(captionWordsAt(WORDS, -1, line)).toEqual([]);
-		expect(captionWordsAt(WORDS, WORDS.length, line)).toEqual([]);
-	});
-
-	it("shows the whole line the word sits on", () => {
-		expect(text(captionWordsAt(WORDS, 2, line))).toEqual(["three", "four"]);
-	});
-
-	it("builds the line up to the current word", () => {
-		expect(shown(captionWordsAt(WORDS, 2, word))).toEqual(["three"]);
-		expect(shown(captionWordsAt(WORDS, 3, word))).toEqual(["three", "four"]);
-	});
-
-	it("keeps unspoken words in the line so it never reflows", () => {
-		expect(text(captionWordsAt(WORDS, 2, word))).toEqual(["three", "four"]);
-		expect(captionWordsAt(WORDS, 2, word).map((w) => w.hidden)).toEqual([
-			false,
-			true,
+describe("groupIntoLines", () => {
+	it("gathers words into a line until it has run the line length", () => {
+		expect(spans(groupIntoLines(timed, 1500))).toEqual([
+			["one", "two"],
+			["three", "four"],
+			["five"],
 		]);
 	});
 
-	it("shows the whole line under line reveal", () => {
-		expect(captionWordsAt(WORDS, 2, line).every((w) => !w.hidden)).toBe(true);
+	it("breaks lines in a language written without spaces, and draws none between its words", () => {
+		const unspaced = ["今日", "は", "晴れ", "です"].map((text, at) =>
+			toCaption(text, at, at + 0.8),
+		);
+		const lines = groupIntoLines(unspaced, 1500);
+		expect(lines.map(lineText)).toEqual(["今日は", "晴れです"]);
+		expect(lines.map(({ firstWordIndex }) => firstWordIndex)).toEqual([0, 2]);
 	});
 
-	it("marks only the current word active", () => {
-		expect(activeText(captionWordsAt(WORDS, 3, line))).toEqual(["four"]);
+	it("never starts a line with punctuation timed on its own", () => {
+		const punctuated = [
+			"こ",
+			"ん",
+			"に",
+			"ち",
+			"は",
+			"、",
+			"世",
+			"界",
+			"！",
+		].map((text, at) => toCaption(text, at, at + 0.8));
+		const lines = groupIntoLines(punctuated, 1500);
+		expect(lines.map(({ firstWordIndex }) => firstWordIndex)).toEqual([
+			0, 2, 4, 6,
+		]);
+		expect(lines.map(lineText)).toEqual(["こん", "にち", "は、", "世界！"]);
+		expect(groupIntoLines(punctuated, 0).map(lineText)).toEqual([
+			"こ",
+			"ん",
+			"に",
+			"ち",
+			"は、",
+			"世",
+			"界！",
+		]);
 	});
 
-	it("keeps a trailing partial line intact", () => {
-		expect(text(captionWordsAt(WORDS, 4, line))).toEqual(["five"]);
+	it("shows one word at a time at a line length of 0", () => {
+		expect(spans(groupIntoLines(timed, 0))).toEqual(WORDS.map((w) => [w]));
 	});
 
-	it("falls back to one word per line for degenerate limits", () => {
-		const words = captionWordsAt(WORDS, 3, {
-			maxWordsPerLine: 0,
-			reveal: "line",
-		});
-		expect(text(words)).toEqual(["four"]);
+	it("counts each line's first word from where the trim left the element's words", () => {
+		expect(
+			groupIntoLines(timed, 1500, 3).map(
+				({ firstWordIndex }) => firstWordIndex,
+			),
+		).toEqual([3, 5, 7]);
 	});
 });

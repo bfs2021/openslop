@@ -3,7 +3,7 @@ import {
 	getTrimStart,
 } from "@/lib/canvas/element-attributes";
 import { CONTENT_TYPES, type ContentElement } from "@/lib/canvas/types";
-import type { TextTimestamp } from "@/lib/connectors/types";
+import type { Caption } from "@remotion/captions";
 import { clamp } from "@/lib/utils";
 import { MIN_DURATION_SEC } from "./scene-builder";
 import type { ResolvedElement } from "./types";
@@ -72,18 +72,21 @@ export const elementTrim = (
 		getTimelineDuration(element),
 	);
 
-/** Word timings counted from the trim start, without the words cut before it. */
-export const trimTimestamps = (
-	timestamps: TextTimestamp[],
-	startSec: number,
-): TextTimestamp[] =>
-	timestamps
-		.filter(({ end }) => end > startSec)
-		.map((word) => ({
-			...word,
-			start: word.start - startSec,
-			end: word.end - startSec,
+/** Caption timings counted from the trim start, keeping only the words spoken whole inside the clip. */
+export function trimTimestamps(
+	captions: Caption[],
+	{ trimStartSec, durationSec }: Trim,
+): Caption[] {
+	const startMs = trimStartSec * 1000;
+	const endMs = startMs + durationSec * 1000;
+	return captions
+		.filter((caption) => caption.startMs >= startMs && caption.endMs <= endMs)
+		.map((caption) => ({
+			...caption,
+			startMs: caption.startMs - startMs,
+			endMs: caption.endMs - startMs,
 		}));
+}
 
 /**
  * The clip's start stays put and what follows ripples. The clip holds at least
