@@ -1,4 +1,5 @@
 import type { BaseEditor } from "slate";
+import type { HistoryEditor } from "slate-history";
 import type { ReactEditor } from "slate-react";
 import { z } from "zod";
 import type { ConnectorModels } from "@/lib/connectors/models";
@@ -168,6 +169,7 @@ export const ElementTypeSchema = z.enum(
 );
 
 export type CanvasEditor = BaseEditor &
+	HistoryEditor &
 	ReactEditor & {
 		id?: string;
 		/** Resolved per call, since the project's and account's pins change mid-session. */

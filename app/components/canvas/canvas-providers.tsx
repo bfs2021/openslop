@@ -18,6 +18,7 @@ import { SloppyProvider } from "../sloppy/sloppy-provider";
 import { EditorPanelProvider } from "./panel/editor-panel-context";
 import { AssetEditProvider } from "./elements/character/asset-edit-provider";
 import { useEditorSession } from "./hooks/use-editor-session";
+import { useProjectHistoryHotkeys } from "./project-history-keymap";
 
 const CanvasScopedProviders = composeProviders(
 	WorkspaceProvider,
@@ -43,6 +44,7 @@ const CanvasScopedProviders = composeProviders(
  */
 export function CanvasProviders({ children }: { children: ReactNode }) {
 	const { editor, onDocumentChange, history } = useEditorSession();
+	useProjectHistoryHotkeys(editor);
 
 	return (
 		<Slate
