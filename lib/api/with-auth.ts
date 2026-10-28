@@ -1,5 +1,5 @@
 import type { User } from "@supabase/supabase-js";
-import { errorMessage } from "../errors";
+import { headers } from "next/headers";
 import { getUser } from "./auth";
 import { refuseOverBudget } from "./budget";
 import { hasApiAccess, MissingProviderKeyError } from "./provider-keys";
@@ -20,8 +20,9 @@ async function runGuarded(
 	} catch (error) {
 		if (error instanceof MissingProviderKeyError)
 			return badRequest(error.message);
-		logger.error(error, `${label} failed`);
-		return serverError(`${label} failed: ${errorMessage(error)}`);
+		const requestId = (await headers()).get("x-vercel-id");
+		logger.error({ err: error, requestId }, `${label} failed`);
+		return serverError(`${label} failed`);
 	}
 }
 
