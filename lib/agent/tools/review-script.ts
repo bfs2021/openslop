@@ -19,8 +19,8 @@ export const reviewScript = defineTool({
 	  Leave a finding alone when acting on it would undo what the user asked for, and say
 	  which one you left and why.
 
-	  Run it after write_script and adapt_script, and after an edit that rewrote several
-	  elements. A one-element tweak does not need it.
+	  Run it when the user explicitly asks for a review or accepts your offer. Do not run it
+	  just because you wrote, adapted or edited the script.
 	`,
 	input: z.object({
 		format: z

@@ -46,7 +46,7 @@ export const adaptScript = defineTool({
 	label: "Putting your script on the canvas",
 	execute: async ({ script, notes }, ctx) => {
 		await ctx.adaptScript(script, notes);
-		return "Put that script onto the canvas. Read it to see what landed, then review_script it.";
+		return "Put that script onto the canvas. Read it to see what landed.";
 	},
 	draftsScript: true,
 });

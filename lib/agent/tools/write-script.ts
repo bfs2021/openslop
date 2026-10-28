@@ -33,7 +33,7 @@ export const writeScript = defineTool({
 	label: "Writing a new script",
 	execute: async ({ brief }, ctx) => {
 		await ctx.writeScript(brief);
-		return "Wrote a new script onto the canvas. Read it to see what landed, then review_script it.";
+		return "Wrote a new script onto the canvas. Read it to see what landed.";
 	},
 	draftsScript: true,
 });

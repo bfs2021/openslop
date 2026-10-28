@@ -20,6 +20,7 @@ import {
 import { CaptionStyleSchema } from "@/lib/captions/caption-style";
 import type { RefineOp } from "@/lib/script/refine/types";
 import { NO_FINDINGS } from "@/lib/script/prompt/review";
+import { sloppyInstructions } from "../prompt";
 
 const recordScriptSettings = (patches: Partial<ScriptSettings>[]) => ({
 	updateScriptSettings: (patch: Partial<ScriptSettings>) =>
@@ -61,6 +62,49 @@ const context = (over: Partial<AgentToolContext> = {}): AgentToolContext => ({
 	updateModels: () => {},
 	isConnected: () => true,
 	...over,
+});
+
+describe("script review opt-in", () => {
+	it("asks before reviewing a new or adapted script", async () => {
+		const systemPromptContent = sloppyInstructions({})[0]?.content;
+		const systemPrompt =
+			typeof systemPromptContent === "string"
+				? systemPromptContent.replace(/\s+/g, " ")
+				: "";
+		const reviewDescription = SLOPPY_TOOLS.review_script.description;
+		const normalizedReviewDescription =
+			typeof reviewDescription === "string"
+				? reviewDescription.replace(/\s+/g, " ")
+				: "";
+
+		expect(systemPrompt).toContain(
+			"after write_script or adapt_script, ask whether they want a review and finish the turn",
+		);
+		expect(systemPrompt).toContain(
+			"Do not call review_script until they say yes or ask for one",
+		);
+		expect(normalizedReviewDescription).toContain(
+			"when the user explicitly asks for a review or accepts your offer",
+		);
+		expect(normalizedReviewDescription).toContain(
+			"Do not run it just because you wrote, adapted or edited the script",
+		);
+	});
+
+	it.each([
+		["write_script", { brief: "A new story" }],
+		["adapt_script", { script: "NARRATOR\nA short story." }],
+	] as const)(
+		"does not tell the model to review after %s",
+		async (toolName, input) => {
+			const outcome = await executeToolCall({ toolName, input }, context());
+
+			expect(outcome.ok && outcome.output).toContain(
+				"Read it to see what landed.",
+			);
+			expect(outcome.ok && outcome.output).not.toContain("review_script");
+		},
+	);
 });
 
 describe("executeToolCall", () => {

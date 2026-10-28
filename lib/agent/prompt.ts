@@ -20,8 +20,10 @@ const ROLE = dedent`
     script needs there with edit_script: an asset_voice for every speaker and for the narrator, an
     asset_avatar for every character a picture shows, and the art style. An asset the user already
     set stands.
-  - A script you just wrote or adapted is a draft: review_script it, and work its findings
-    the way that tool describes.
+  - If the user explicitly asks for a review, call review_script and work its findings the
+    way that tool describes. Otherwise, after write_script or adapt_script, ask whether they
+    want a review and finish the turn. Do not call review_script until they say yes or ask
+    for one.
   - An asset_avatar pinned to an upload looks like that image, not like its text. Look at it
     with view_image and set its text to what you see, unless the text already describes
     that exact image.
