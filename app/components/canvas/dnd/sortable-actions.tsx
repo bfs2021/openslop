@@ -1,5 +1,8 @@
 import { GripVertical, Plus } from "@/components/ui/icon";
-import type { DraggableSyntheticListeners } from "@dnd-kit/core";
+import type {
+	DraggableAttributes,
+	DraggableSyntheticListeners,
+} from "@dnd-kit/core";
 import { ActionMenu } from "@/components/ui/action-menu";
 import { IconButton } from "@/components/ui/icon-button";
 
@@ -47,15 +50,21 @@ export function InsertMenu<K extends string>({
 }
 
 export function DragHandle({
+	attributes,
 	listeners,
+	ref,
 }: {
+	attributes?: DraggableAttributes;
 	listeners?: DraggableSyntheticListeners;
+	ref?: React.Ref<HTMLButtonElement>;
 }) {
 	return (
 		<IconButton
+			ref={ref}
 			ariaLabel="Drag to reorder"
 			variant="quiet"
 			className="cursor-grab active:cursor-grabbing"
+			{...attributes}
 			{...listeners}
 		>
 			<GripVertical size={22} />

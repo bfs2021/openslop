@@ -92,9 +92,8 @@ export function ProjectPreview({
 		<div className={`relative h-full w-full ${styles.player}`}>
 			<button
 				type="button"
-				tabIndex={-1}
 				aria-label="Play or pause"
-				className="absolute inset-0 cursor-pointer"
+				className="absolute inset-0 cursor-pointer focus-ring focus-visible:ring-inset"
 				onClick={toggleAndFlash}
 			/>
 			<ToastErrorBoundary label="Player">

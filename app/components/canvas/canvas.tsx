@@ -6,12 +6,13 @@ import {
 	useSlateStatic,
 	type RenderPlaceholderProps,
 } from "slate-react";
-import { DndContext, DragOverlay, pointerWithin } from "@dnd-kit/core";
+import { DndContext, DragOverlay } from "@dnd-kit/core";
 import {
 	SortableContext,
 	verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { useDragAndDrop } from "./dnd/use-drag-and-drop";
+import { canvasCollisionDetection } from "./dnd/collision-detection";
 import { DragTransferContext } from "./dnd/drag-transfer-context";
 import { findBlockById } from "@/lib/canvas/editor-ops";
 import { SortableScene } from "./dnd/sortable-scene";
@@ -68,7 +69,7 @@ export default function Canvas() {
 		<DragTransferContext value={dragTransferStore}>
 			<DndContext
 				sensors={sensors}
-				collisionDetection={pointerWithin}
+				collisionDetection={canvasCollisionDetection}
 				onDragStart={handleDragStart}
 				onDragOver={handleDragOver}
 				onDragEnd={handleDragEnd}

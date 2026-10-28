@@ -4,11 +4,13 @@ import {
 	type DragOverEvent,
 	type DragStartEvent,
 	type UniqueIdentifier,
+	KeyboardSensor,
 	PointerSensor,
 	TouchSensor,
 	useSensor,
 	useSensors,
 } from "@dnd-kit/core";
+import { sortableKeyboardCoordinates } from "@dnd-kit/sortable";
 import { Editor } from "slate";
 import { useSlateSelector } from "slate-react";
 import { crossSceneTransfer, moveDraggedElement } from "@/lib/canvas/drag-ops";
@@ -29,7 +31,13 @@ export function useDragAndDrop(editor: Editor) {
 	const [activeId, setActiveId] = useState<UniqueIdentifier | null>(null);
 	const [dragTransferStore] = useState(createDragTransferStore);
 
-	const sensors = useSensors(useSensor(PointerSensor), useSensor(TouchSensor));
+	const sensors = useSensors(
+		useSensor(PointerSensor),
+		useSensor(TouchSensor),
+		useSensor(KeyboardSensor, {
+			coordinateGetter: sortableKeyboardCoordinates,
+		}),
+	);
 
 	const sceneIdKey = useSlateSelector(selectSceneIdKey);
 	const sceneItems = useMemo<string[]>(
