@@ -68,7 +68,7 @@ function getGenerateLabel(
 }
 
 function EditorToolbarComponent() {
-	const { loading } = useSloppy();
+	const { loading, writingScript, stop } = useSloppy();
 	const scope = useGenerateAll();
 	const queue = useGenerationQueue();
 	const generating = useQueueSelector((q) => q.isBusy());
@@ -77,6 +77,15 @@ function EditorToolbarComponent() {
 	const allGenerated = !scope.empty && scope.pending === 0;
 	const unavailable = busy || scope.pending === 0;
 
+	const cancelActions = [
+		...(writingScript
+			? [{ label: "Cancel writing script", onClick: stop }]
+			: []),
+		...(generating
+			? [{ label: "Cancel generation", onClick: () => queue.cancelAll() }]
+			: []),
+	];
+
 	return (
 		<div
 			className={`relative z-40 flex w-full shrink-0 flex-col items-center gap-3 px-4 py-1.5 ${editorStyles.copilotEnter}`}
@@ -84,17 +93,18 @@ function EditorToolbarComponent() {
 			<Breadcrumbs />
 			<div className="flex w-full items-center gap-3">
 				<div className="ml-auto flex shrink-0 items-center justify-end gap-2">
-					{generating && (
+					{cancelActions.map(({ label, onClick }) => (
 						<TooltipIconButton
-							label="Cancel generation"
+							key={label}
+							label={label}
 							variant="quiet"
 							chip
 							className="self-center"
-							onClick={() => queue.cancelAll()}
+							onClick={onClick}
 						>
 							<X className="h-3 w-3" aria-hidden="true" />
 						</TooltipIconButton>
-					)}
+					))}
 					<Button
 						type="button"
 						variant="generate"
